@@ -21,9 +21,16 @@ class SearchState:
     def pathSelector(self):
         scenes = self.scenes
         paths = np.array([int(scene.properties['pathNumber']) for scene in scenes])
-        paths = np.unique(paths)
+        paths, ind = np.unique(paths, return_index=True)
+
+        def get_ndates(path):
+            dates = np.array([scene.properties['startTime'].split('T')[0] for scene in scenes if int(scene.properties['pathNumber']) == path])
+            dates = np.unique(dates)
+            return len(dates)
+
+        directions = np.array([scene.properties['flightDirection'] for scene in np.array(scenes)[ind]])
         paths_dropdown = widgets.Dropdown(
-            options=paths,
+            options=[(f'Path {path}, {direction} ({get_ndates(path)})', path) for path, direction in zip(paths, directions)],
             value=paths[0],
             description='Relative Orbit:',
             disabled=False,
@@ -76,7 +83,7 @@ end_date = widgets.DatePicker(
     value=end_date_default,
     disabled=False
 )
-items = [orbit_direction, start_date, end_date]
+items = [start_date, end_date]
 inputs = Box(children=items)
 
 download_location = widgets.Text(
@@ -126,12 +133,12 @@ def getSearchMap(inputs, basemap=basemaps.OpenStreetMap.Mapnik):
         searchState.drawn_polygon = Polygon(geo_json[0]['geometry']['coordinates'][0])
 
     
-        date1 = inputs.children[1].value.strftime('%Y-%m-%d')
-        date2 = inputs.children[2].value.strftime('%Y-%m-%d')
+        date1 = inputs.children[0].value.strftime('%Y-%m-%d')
+        date2 = inputs.children[1].value.strftime('%Y-%m-%d')
 
         results = asf.geo_search(dataset=asf.constants.NISAR, 
             intersectsWith=str(searchState.drawn_polygon), 
-            flightDirection=inputs.children[0].value.upper(), 
+            # flightDirection=inputs.children[0].value.upper(), 
             processingLevel='GSLC',start=date1, end=date2)
 
         searchState.scenes = results
