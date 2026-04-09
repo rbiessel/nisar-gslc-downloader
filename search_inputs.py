@@ -70,6 +70,14 @@ orbit_direction = widgets.Dropdown(
     disabled=False,
 )
 
+
+polarizations = widgets.SelectMultiple(
+    options=['HH', 'HV', 'VH', 'VV'],
+    value=['HH'],
+    description='Desired Polarizations',
+    disabled=False
+)
+
 start_date_default = dt.datetime(2025, 7, 1)
 end_date_default = dt.datetime.today()
 
@@ -83,7 +91,7 @@ end_date = widgets.DatePicker(
     value=end_date_default,
     disabled=False
 )
-items = [start_date, end_date]
+items = [start_date, end_date, polarizations]
 inputs = Box(children=items)
 
 download_location = widgets.Text(
@@ -129,19 +137,38 @@ def getSearchMap(inputs, basemap=basemaps.OpenStreetMap.Mapnik):
     searchState = SearchState()
 
     def handle_draw(target, action, geo_json):
+        ## Search Polygon
         searchState.search_coordinates = geo_json[0]['geometry']['coordinates'][0]
         searchState.drawn_polygon = Polygon(geo_json[0]['geometry']['coordinates'][0])
 
-    
+        ## Figure out polarization combos -- probably could be better
+        pol2dl = inputs.children[2].value
+        single_pol = 'HH'
+        dual_pol = 'HH+HV'
+        quad_pol = 'HH+HV+VH+VV'
+        # modes = [single_pol, dual_pol, quad_pol]
+
+        if ('VH' in pol2dl) or ('VV' in pol2dl):
+            polarizations = [quad_pol]
+        elif 'HV' in pol2dl:
+            polarizations = [dual_pol, quad_pol]
+        else:
+            polarizations = [single_pol, dual_pol, quad_pol]
+
+        ## Dates
         date1 = inputs.children[0].value.strftime('%Y-%m-%d')
         date2 = inputs.children[1].value.strftime('%Y-%m-%d')
 
+        ## ASF Search
         results = asf.geo_search(dataset=asf.constants.NISAR, 
             intersectsWith=str(searchState.drawn_polygon), 
             # flightDirection=inputs.children[0].value.upper(), 
-            processingLevel='GSLC',start=date1, end=date2)
+            processingLevel='GSLC',
+            mainBandPolarization=polarizations,
+            start=date1, end=date2)
 
         searchState.scenes = results
+        print(f'Finished Search with {len(results)} results.')
         for result in results:
             coords = result.geometry['coordinates'][0]
             coords_latlon = [(lat, lon) for lon, lat in coords]
