@@ -47,11 +47,14 @@ class SearchState:
 
         return paths_dropdown
     
-    def summaryMap(self):
-        m = Map(center=(37.5531, -109.6914), zoom=3)
-
+    def summaryMap(self, basemap=basemaps.OpenStreetMap.Mapnik):
         coords_latlon = [(lat, lon) for lon, lat in self.search_coordinates]
         search_layer = iPoly(locations=coords_latlon, color='orange', fill_color='orange')
+
+
+        m = Map(center=(37.5531, -109.6914), zoom=3, basemap=basemap)
+        m.fit_bounds([coords_latlon[0], coords_latlon[2]])
+        # print(coords_latlon)
 
         for scene in self.scenes2download:
             coords = scene.geometry['coordinates'][0]
@@ -141,12 +144,15 @@ def getSearchMap(inputs, basemap=basemaps.OpenStreetMap.Mapnik):
         searchState.search_coordinates = geo_json[0]['geometry']['coordinates'][0]
         searchState.drawn_polygon = Polygon(geo_json[0]['geometry']['coordinates'][0])
 
+        coords_latlon = [(lat, lon) for lon, lat in searchState.search_coordinates]
+
+        m.fit_bounds([coords_latlon[0], coords_latlon[2]])
+
         ## Figure out polarization combos -- probably could be better
         pol2dl = inputs.children[2].value
         single_pol = 'HH'
         dual_pol = 'HH+HV'
         quad_pol = 'HH+HV+VH+VV'
-        # modes = [single_pol, dual_pol, quad_pol]
 
         if ('VH' in pol2dl) or ('VV' in pol2dl):
             polarizations = [quad_pol]
@@ -162,7 +168,6 @@ def getSearchMap(inputs, basemap=basemaps.OpenStreetMap.Mapnik):
         ## ASF Search
         results = asf.geo_search(dataset=asf.constants.NISAR, 
             intersectsWith=str(searchState.drawn_polygon), 
-            # flightDirection=inputs.children[0].value.upper(), 
             processingLevel='GSLC',
             mainBandPolarization=polarizations,
             start=date1, end=date2)
