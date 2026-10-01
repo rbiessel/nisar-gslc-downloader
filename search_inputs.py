@@ -50,11 +50,8 @@ class SearchState:
     def summaryMap(self, basemap=basemaps.OpenStreetMap.Mapnik):
         coords_latlon = [(lat, lon) for lon, lat in self.search_coordinates]
         search_layer = iPoly(locations=coords_latlon, color='orange', fill_color='orange')
-
-
         m = Map(center=(37.5531, -109.6914), zoom=3, basemap=basemap)
         m.fit_bounds([coords_latlon[0], coords_latlon[2]])
-        # print(coords_latlon)
 
         for scene in self.scenes2download:
             coords = scene.geometry['coordinates'][0]
@@ -170,6 +167,7 @@ def getSearchMap(inputs, basemap=basemaps.OpenStreetMap.Mapnik):
             intersectsWith=str(searchState.drawn_polygon), 
             processingLevel='GSLC',
             mainBandPolarization=polarizations,
+            dataMaturity='provisional',
             start=date1, end=date2)
 
         searchState.scenes = results
